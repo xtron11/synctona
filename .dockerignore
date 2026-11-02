@@ -1,0 +1,28 @@
+# .dockerignore (в корне; применяется к контексту сборки агента)
+**/venv
+**/.venv
+venv*/
+**/__pycache__
+**/*.pyc
+**/*.pyo
+.git
+.gitignore
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# агенту не нужны сервисы, тесты, деплой-манифесты и кэши моделей
+services/
+tests/
+deploy/
+docker/
+scripts/
+models/
+voice_output/
+*.wav
+
+# документацию не тащим, кроме README (нужен для pip install .)
+*.md
+!README.md
+
+.env

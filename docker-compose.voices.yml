@@ -1,0 +1,33 @@
+# docker-compose.voices.yml  (в КОРНЕ репозитория)
+# Additive-оверлей: том для голосов на TTS + сервис enrollment (consent).
+# Запуск вместе с остальными:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.voices.yml up -d --build
+
+name: synctona
+
+services:
+  tts:
+    volumes:
+      - voices:/voices           # merge с hf-cache/torch-cache из основного compose
+    environment:
+      - SYNCTONA_VOICES_DIR=/voices
+
+  enrollment:
+    build:
+      context: ./services/enrollment
+      dockerfile: Dockerfile
+    container_name: synctona-enrollment
+    environment:
+      - SYNCTONA_TTS_ENDPOINT=http://tts:8001
+      - SYNCTONA_REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8004:8004"
+    depends_on:
+      tts:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  voices:

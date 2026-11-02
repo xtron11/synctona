@@ -1,0 +1,19 @@
+# docker/Dockerfile.agent
+# Контекст сборки = КОРЕНЬ репозитория (нужны pyproject.toml + src/).
+# Агент лёгкий: ни torch, ни моделей — только оркестрация и сеть.
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY src ./src
+
+# Устанавливаем пакет synctona (src-layout из pyproject).
+RUN pip install .
+
+# dev-режим livekit-agents: воркер сам заходит в комнаты dev-сервера.
+CMD ["python", "-m", "synctona.agent_worker", "dev"]

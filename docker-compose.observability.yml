@@ -1,0 +1,55 @@
+# docker-compose.observability.yml  (в КОРНЕ репозитория)
+# Additive-оверлей: поднимает observability-стек и дооснащает агента метриками/трейсингом.
+# Запуск ВМЕСТЕ с основным compose:
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#
+# UI после старта:
+#   Grafana     http://localhost:3000   (дашборд «Synctona — Real-Time Pipeline»)
+#   Prometheus  http://localhost:9090
+#   Jaeger      http://localhost:16686
+
+name: synctona
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: synctona-prometheus
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: synctona-grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: synctona-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"   # UI
+      - "4317:4317"      # OTLP gRPC (сюда агент шлёт спаны)
+    restart: unless-stopped
+
+  # Дооснащаем существующий agent метрик-портом и трейсингом (merge с основным compose).
+  agent:
+    environment:
+      - SYNCTONA_METRICS_PORT=9100
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    ports:
+      - "9100:9100"     # Prometheus скрейпит отсюда

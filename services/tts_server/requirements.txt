@@ -1,0 +1,19 @@
+# services/tts_server/requirements.txt
+# Клон-TTS пул (Chatterbox v3). Отдельный образ/venv — НЕ смешивать с агентом.
+
+fastapi>=0.115
+uvicorn[standard]>=0.30
+websockets>=12
+prometheus-client>=0.20
+numpy>=1.26,<3
+
+# Инференс. torch ставь под свою CUDA (см. pytorch.org), версию пиновать по железу.
+torch>=2.2
+torchaudio>=2.2
+
+# Клон-TTS. chatterbox тянет свою transformers — не доустанавливай transformers
+# вручную поверх, чтобы не поймать конфликт версий.
+chatterbox-streaming @ git+https://github.com/davidbrowne17/chatterbox-streaming.git
+
+# Если после установки импорт chatterbox падает на transformers 5.x — закрепи:
+# transformers>=4.46,<5

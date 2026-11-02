@@ -1,0 +1,57 @@
+# docker-compose.gpu.yml  (в КОРНЕ репозитория)
+# Переводит сервисы моделей на GPU (CUDA-колёса torch + device=cuda + доступ к карте).
+#
+# Пересборка обязательна (меняются torch-колёса на CUDA):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+#
+# С observability одновременно:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.observability.yml up -d --build
+#
+# Требуется: драйвер NVIDIA на хосте + Docker Desktop с WSL2. Проверка:
+#   docker run --rm --gpus all nvidia/cuda:12.3.1-base-ubuntu22.04 nvidia-smi
+
+name: synctona
+
+services:
+  nmt:
+    build:
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu124
+    environment:
+      - SYNCTONA_NMT_DEVICE=cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  asr:
+    build:
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu124
+    environment:
+      - SYNCTONA_ASR_DEVICE=cuda
+      - SYNCTONA_ASR_MODEL=small
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  tts:
+    build:
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu124
+    environment:
+      - SYNCTONA_TTS_DEVICE=cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

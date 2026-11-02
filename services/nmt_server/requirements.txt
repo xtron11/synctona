@@ -1,0 +1,17 @@
+# services/nmt_server/requirements.txt
+# Мультиязычный NMT (M2M-100 418M; NLLB — сменой имени модели). Отдельный образ.
+
+fastapi>=0.115
+uvicorn[standard]>=0.30
+prometheus-client>=0.20
+pydantic>=2.7
+
+torch>=2.2
+
+# M2M100Tokenizer ОБЯЗАТЕЛЬНО требует sentencepiece — без него сервис не поднимется.
+transformers>=4.57,<5
+sentencepiece>=0.2
+sacremoses>=0.1
+
+# Пин <5 намеренно консервативный (M2M стабилен на 4.x). Если поднимешь до 5.x —
+# сначала прогони /v1/translate на паре ru→en, убедись, что forced_bos жив.

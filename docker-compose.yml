@@ -1,0 +1,122 @@
+# docker-compose.yml (в КОРНЕ репозитория)
+# Запуск:  docker compose up --build
+# Порядок старта: redis+livekit → 3 сервиса моделей (ждём readyz) → агент.
+
+name: synctona
+
+services:
+  # ── Инфраструктура ─────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: synctona-redis
+    ports:
+      - "6379:6379"
+    healthcheck:                       # без этого agent'ов service_healthy падал
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: synctona-livekit
+    # --bind 0.0.0.0 ОБЯЗАТЕЛЬНО: без него dev-сервер слушает только 127.0.0.1
+    # и недоступен из compose-сети (это видно было в твоих логах).
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+
+  # ── Сервисы моделей ────────────────────────────────────────────────────────
+  nmt:
+    build:
+      context: ./services/nmt_server
+      dockerfile: Dockerfile
+    container_name: synctona-nmt
+    environment:
+      - SYNCTONA_NMT_DEVICE=cpu
+    ports:
+      - "8002:8002"
+    volumes:
+      - hf-cache:/models/hf          # кэш HF, чтобы не качать модель на каждый старт
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 300s             # прогрев/скачивание модели долгий → не считаем ранние 503 сбоем
+
+  asr:
+    build:
+      context: ./services/asr_server
+      dockerfile: Dockerfile
+    container_name: synctona-asr
+    environment:
+      - SYNCTONA_ASR_DEVICE=cpu
+      - SYNCTONA_ASR_MODEL=small
+    ports:
+      - "8003:8003"
+    volumes:
+      - hf-cache:/models/hf
+      - torch-cache:/models/torch    # кэш silero-vad (torch.hub)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 300s
+
+  tts:
+    build:
+      context: ./services/tts_server
+      dockerfile: Dockerfile
+    container_name: synctona-tts
+    environment:
+      - SYNCTONA_TTS_DEVICE=cpu
+    ports:
+      - "8001:8001"
+    volumes:
+      - hf-cache:/models/hf
+      - torch-cache:/models/torch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 300s
+
+  # ── Агент-оркестратор ──────────────────────────────────────────────────────
+  agent:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.agent
+    container_name: synctona-agent
+    environment:
+      # Эндпоинты сервисов по compose-DNS (имена сервисов = хостнеймы).
+      - SYNCTONA_NMT__ENDPOINT=http://nmt:8002
+      - SYNCTONA_TTS_POOL__ENDPOINT=http://tts:8001
+      - SYNCTONA_ASR_ENDPOINT=http://asr:8003
+      - SYNCTONA_REDIS_URL=redis://redis:6379/0
+      # LiveKit: и «наш» ключ конфига, и стандартные переменные livekit-agents.
+      - SYNCTONA_LIVEKIT__URL=ws://livekit:7880
+      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - SYNCTONA_LIVEKIT__EXPLICIT_DISPATCH=false
+    depends_on:
+      redis:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+      nmt:
+        condition: service_healthy   # ждём именно ГОТОВНОСТИ (readyz), а не просто запуска
+      asr:
+        condition: service_healthy
+      tts:
+        condition: service_healthy
+    restart: on-failure              # если рванул раньше готовности — перезапустится
+
+volumes:
+  hf-cache:
+  torch-cache:

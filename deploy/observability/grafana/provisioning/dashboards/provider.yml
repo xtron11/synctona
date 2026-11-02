@@ -1,0 +1,14 @@
+# deploy/observability/grafana/provisioning/dashboards/provider.yml
+apiVersion: 1
+
+providers:
+  - name: synctona
+    orgId: 1
+    folder: Synctona
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 15
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

@@ -1,0 +1,124 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "tags": ["synctona"],
+  "time": {"from": "now-30m", "to": "now"},
+  "refresh": "10s",
+  "title": "Synctona — Real-Time Pipeline",
+  "uid": "synctona-main",
+  "templating": {"list": []},
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "E2E first-audio (SLO) — p95 / p50",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ms", "custom": {"drawStyle": "line", "fillOpacity": 8},
+        "thresholds": {"mode": "absolute", "steps": [
+          {"color": "green", "value": null}, {"color": "orange", "value": 2000}, {"color": "red", "value": 2500}]}}},
+      "targets": [
+        {"refId": "A", "expr": "histogram_quantile(0.95, sum(rate(synctona_agent_e2e_first_audio_ms_bucket[$__rate_interval])) by (le))", "legendFormat": "p95"},
+        {"refId": "B", "expr": "histogram_quantile(0.50, sum(rate(synctona_agent_e2e_first_audio_ms_bucket[$__rate_interval])) by (le))", "legendFormat": "p50"}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "TTS TTFB — p95 / p50 (budget 700ms)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ms", "custom": {"drawStyle": "line", "fillOpacity": 8},
+        "thresholds": {"mode": "absolute", "steps": [
+          {"color": "green", "value": null}, {"color": "red", "value": 700}]}}},
+      "targets": [
+        {"refId": "A", "expr": "histogram_quantile(0.95, sum(rate(synctona_tts_ttfb_ms_bucket[$__rate_interval])) by (le))", "legendFormat": "p95"},
+        {"refId": "B", "expr": "histogram_quantile(0.50, sum(rate(synctona_tts_ttfb_ms_bucket[$__rate_interval])) by (le))", "legendFormat": "p50"}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "TTS active streams & utilization",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "fillOpacity": 10}},
+        "overrides": [{"matcher": {"id": "byName", "options": "utilization"},
+          "properties": [{"id": "custom.axisPlacement", "value": "right"}, {"id": "max", "value": 1}, {"id": "unit", "value": "percentunit"}]}]},
+      "targets": [
+        {"refId": "A", "expr": "synctona_tts_active_streams", "legendFormat": "active streams"},
+        {"refId": "B", "expr": "synctona_tts_utilization", "legendFormat": "utilization"}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "TTS RTF — p95 / p50 (calibration)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "none", "custom": {"drawStyle": "line", "fillOpacity": 8}}},
+      "targets": [
+        {"refId": "A", "expr": "histogram_quantile(0.95, sum(rate(synctona_tts_rtf_bucket[$__rate_interval])) by (le))", "legendFormat": "rtf p95"},
+        {"refId": "B", "expr": "histogram_quantile(0.50, sum(rate(synctona_tts_rtf_bucket[$__rate_interval])) by (le))", "legendFormat": "rtf p50"}
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "TTS queue depth & backpressure (rejects/cancels /s)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "fillOpacity": 8}}},
+      "targets": [
+        {"refId": "A", "expr": "synctona_tts_queue_depth", "legendFormat": "queue depth"},
+        {"refId": "B", "expr": "rate(synctona_tts_rejects_total[$__rate_interval])", "legendFormat": "rejects/s"},
+        {"refId": "C", "expr": "rate(synctona_tts_cancels_total[$__rate_interval])", "legendFormat": "cancels/s"}
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "NMT & ASR latency — p95",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ms", "custom": {"drawStyle": "line", "fillOpacity": 8}}},
+      "targets": [
+        {"refId": "A", "expr": "histogram_quantile(0.95, sum(rate(synctona_nmt_latency_ms_bucket[$__rate_interval])) by (le))", "legendFormat": "nmt p95"},
+        {"refId": "B", "expr": "histogram_quantile(0.95, sum(rate(synctona_asr_finalize_ms_bucket[$__rate_interval])) by (le))", "legendFormat": "asr finalize p95"}
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Active sessions",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 24},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "none", "color": {"mode": "thresholds"}}},
+      "targets": [{"refId": "A", "expr": "synctona_agent_active_sessions", "legendFormat": "sessions"}]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Admission rejects /s",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 24},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "none", "thresholds": {"mode": "absolute", "steps": [
+        {"color": "green", "value": null}, {"color": "red", "value": 0.01}]}}},
+      "targets": [{"refId": "A", "expr": "rate(synctona_agent_admission_rejects_total[$__rate_interval])", "legendFormat": "rejects/s"}]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Barge-in & turns /s",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 24},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "fillOpacity": 8}}},
+      "targets": [
+        {"refId": "A", "expr": "rate(synctona_agent_turns_total[$__rate_interval])", "legendFormat": "turns/s"},
+        {"refId": "B", "expr": "rate(synctona_agent_barge_in_total[$__rate_interval])", "legendFormat": "barge-in/s"}
+      ]
+    }
+  ]
+}

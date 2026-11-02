@@ -1,0 +1,27 @@
+# deploy/observability/prometheus.yml
+# Скрейпит /metrics всех сервисов и агента по compose-DNS.
+
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  - job_name: tts
+    static_configs:
+      - targets: ["tts:8001"]
+        labels: {service: tts}
+
+  - job_name: nmt
+    static_configs:
+      - targets: ["nmt:8002"]
+        labels: {service: nmt}
+
+  - job_name: asr
+    static_configs:
+      - targets: ["asr:8003"]
+        labels: {service: asr}
+
+  - job_name: agent
+    static_configs:
+      - targets: ["agent:9100"]
+        labels: {service: agent}

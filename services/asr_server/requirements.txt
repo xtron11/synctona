@@ -1,0 +1,8 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+websockets>=12
+prometheus-client>=0.20
+numpy>=1.26,<3
+
+faster-whisper>=1.0.3
+torch>=2.2
